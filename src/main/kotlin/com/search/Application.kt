@@ -13,20 +13,24 @@ import java.util.concurrent.CopyOnWriteArraySet
 
 val NUMBER_OF_THREADS = 20
 
+
 @kotlinx.coroutines.ExperimentalCoroutinesApi
 fun main(args: Array<String>) {
-    var SEARCH_TERM = "foo"
-    if (args.isNotEmpty()) {
-        SEARCH_TERM = args[0]
-    }
 
-    log("Searching for term: ${SEARCH_TERM}")
+    // Load in the properties
+    val properties = PropertiesLoader.load("/config.properties")
+    val numberOfThreads = properties.getProperty("threads").toInt()
+    val urlFilePath = properties.getProperty("urlFilePath")
+    val resultsFilePath = properties.getProperty("resultsFilePath")
+
+    val searchTerm = getSearchTerm(args)
+    log("Searching for term: ${searchTerm}")
 
     val set = CopyOnWriteArraySet<String>()
 
     runBlocking {
 
-        val urls = URLFileReader.getURLs("/urls.txt")
+        val urls = URLFileReader.getURLs(urlFilePath)
 
         val searchChannel = produce(CoroutineName("request")) {
             for (url in urls) {
@@ -37,15 +41,15 @@ fun main(args: Array<String>) {
         // Launch the search coroutines
         withContext(Dispatchers.IO) {
             coroutineScope {
-                repeat(NUMBER_OF_THREADS) {
+                repeat(numberOfThreads) {
                     launch {
-                        searchPage(searchChannel, SEARCH_TERM, set)
+                        searchPage(searchChannel, searchTerm, set)
                     }
                 }
             }
 
             // Write results
-            ResultWriter.writeFile("results.txt", set)
+            ResultWriter.writeFile(resultsFilePath, set)
         }
     }
 }
@@ -64,6 +68,15 @@ private suspend fun searchPage(queriesChannel: ReceiveChannel<CSVRecord>, search
             set.add(url)
         }
     }
+}
+
+private fun getSearchTerm(args: Array<String>): String {
+    var term = "foo"
+    if (args.isNotEmpty()) {
+        term = args[0]
+    }
+
+    return term
 }
 
 fun log(msg: String) { println("[${Thread.currentThread().name}] $msg")}

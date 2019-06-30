@@ -12,10 +12,9 @@ object URLFileReader {
      * @param path - file path to csv txt file
      */
     fun getURLs(path: String): CSVParser {
-        val stream: InputStream = this.javaClass.getResourceAsStream(path)
-//        val stream: InputStream = this.javaClass.getResourceAsStream(path)
-//        val stream = javaClass.getResourceAsStream(path)
+        val stream: InputStream = FileReader.readFile(path)
         val reader = stream.bufferedReader()
+
         if (!Objects.isNull(reader)) {
             // TODO: not sure if CSVParser will automatically close the file descriptor
             return CSVParser(reader, CSVFormat.DEFAULT)
